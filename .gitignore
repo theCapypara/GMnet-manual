@@ -1,0 +1,4 @@
+/_build/
+/.idea/*
+/_lexer/__pycache__/*
+!/.idea/watcherTasks.xml
