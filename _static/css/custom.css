@@ -1,0 +1,31 @@
+.highlight-gml pre .c1,
+.highlight-gml pre .c2,
+.highlight-gml pre .cm {
+  color: #8fef8f !important;
+  font-style: normal !important;
+}
+
+.highlight-gml pre .k,
+.highlight-gml pre .kc,
+.highlight-gml pre .kc,
+.highlight-gml pre .nb {
+  color: #ffb871 !important;
+  font-weight: normal !important;
+}
+
+.highlight-gml pre .mi,
+.highlight-gml pre .s1,
+.highlight-gml pre .s2 {
+  color: #ff8080 !important;
+}
+
+.highlight-gml pre .kr {
+  color: #00bcbc !important;
+}
+
+.highlight-gml {
+    background: #222222 !important;
+}
+.highlight-gml pre {
+    color: #c0c0c0 !important;
+}

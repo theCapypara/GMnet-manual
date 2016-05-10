@@ -1,223 +1,539 @@
-import sys
+# Based on Javascript Lexer and propably not very accurate :)
+
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups
-from pygments.token import Error, Punctuation, Literal, Token, \
-    Text, Comment, Operator, Keyword, Name, String, Number, Generic, \
-    Whitespace
+import pygments.unistring as uni
+from pygments.lexer import RegexLexer, include, default
+from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+    Number, Punctuation
 
+JS_IDENT_START = ('(?:[$_' + uni.combine('Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl') +
+                  ']|\\\\u[a-fA-F0-9]{4})')
+JS_IDENT_PART = ('(?:[$' + uni.combine('Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl',
+                                       'Mn', 'Mc', 'Nd', 'Pc') +
+                 u'\u200c\u200d]|\\\\u[a-fA-F0-9]{4})')
+JS_IDENT = JS_IDENT_START + '(?:' + JS_IDENT_PART + ')*'
 
 class GMLLexer(RegexLexer):
 
-    name = 'GameMaker Language'
+    name = 'GameMaker Language + GMnet'
     aliases = ['gml']
     filenames = ['*.gml']
     mimetypes = ['text/x-gml']
 
-    flags = re.MULTILINE | re.DOTALL
-
-    iden_rex = r'[a-zA-Z_][a-zA-Z0-9_\.]*'
-    class_iden_rex = r'(' + iden_rex + r')(::)(' + iden_rex + r')'
-    definition_rex = r'(' + iden_rex + r')' + r'(\s*:\s*)\b'
-    keyword_rex = r'(device|system|port|connection|process|thread|data)'
-
-    with_tuple = (r'(with)(\s+)', bygroups(Keyword.Namespace, Whitespace), 'with-list')
-    text_tuple = (r'[^\S\n]+', Text)
-    terminator_tuple = (r'(;)(\s+)', bygroups(Punctuation, Whitespace), '#pop')
-    comment_tuple = (r'--.*?$', Comment.Single)
-    comment_whitespace_tuple = (r'(--.*?$)(\s+)', bygroups(Comment.Single, Whitespace))
+    flags = re.DOTALL | re.UNICODE | re.MULTILINE
 
     tokens = {
-        'packageOrSystem': [
-            text_tuple,
-            (r'(implementation)(\s+)(' + iden_rex + r')', bygroups(Name.Class, Whitespace, Name.Class), '#pop'),
-            (iden_rex, Name.Class, '#pop'),
+        'commentsandwhitespace': [
+            (r'\s+', Text),
+            (r'//.*?\n', Comment.Single),
+            (r'/\*.*?\*/', Comment.Multiline)
         ],
-        'annex': [
-            text_tuple,
-            (r'(\s*)({\*\*)(\s+)', bygroups(Whitespace, Punctuation, Whitespace)),
-            (r'(use)(\s+)(types)(\s+)(' + iden_rex + ')(\s*)(;)(\s+)',
-             bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace, Name.Namespace, Whitespace,
-                      Punctuation, Whitespace)),
-            (r'(error)(\s+)(propagations)(\s+)', bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace),
-             'error-propagations'),
-            (r'(connection)(\s+)(error)(\s+)', bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace),
-             'connection-error'),
-            (r'(properties)(\s+)', bygroups(Keyword.Namespace, Whitespace), 'property-section'),
-            (r'(error)(\s+)(types)(\s+)', bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace),
-             'error-types'),
-            (r'(\*\*})(\s*)(;)?(\s+)', bygroups(Punctuation, Whitespace, Punctuation, Whitespace), '#pop'),
-            (iden_rex, Name.Class),
-        ],
-        'connection-error': [
-            (r'(' + iden_rex + ')(\s*)(:)(\s*)(error)(\s+)(source)(\s+)(' + iden_rex + ')(\s*)(;)(\s+)',
-             bygroups(Name.Variable.Instance, Whitespace, Punctuation, Whitespace, Keyword.Pseudo, Whitespace,
-                      Keyword.Pseudo, Whitespace, Name.Variable.Class, Whitespace, Punctuation, Whitespace)),
-            (r'(end)(\s*)(connection)(\s*)(;)(\s+)',
-             bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace, Punctuation, Whitespace), '#pop'),
-        ],
-        'error-types': [
-            (r'(' + iden_rex + ')(\s*)(:)(\s*)', bygroups(Name.Attribute, Whitespace, Punctuation, Whitespace),
-             'error-type-declaration'),
-            # The use of Name.Attribute here is a hack because SAnToS's stylesheet doesn't differentiate between global (which this should be) and class variables, which makes the code much harder to read.
-            (r'(' + iden_rex + ')(\s+)(renames)(\s+)(type)(\s+)' + class_iden_rex,
-             bygroups(Name.Attribute, Whitespace, Keyword.Pseudo, Whitespace, Keyword.Pseudo, Whitespace,
-                      Name.Namespace, Punctuation, Name.Variable.Class), 'error-type-declaration'),
-            (r'(end)(\s+)(types)(\s*)(;)(\s+)',
-             bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace, Punctuation, Whitespace), '#pop'),
-            comment_whitespace_tuple,
-        ],
-        'error-type-declaration': [
-            (r'(type)(\s+)(extends)(\s+)' + class_iden_rex,
-             bygroups(Keyword.Type, Whitespace, Keyword.Pseudo, Whitespace, Name.Namespace, Punctuation,
-                      Name.Variable.Class)),
-            (r'(type)(\s*)(;)(\s*)', bygroups(Keyword.Type, Whitespace, Punctuation, Whitespace), '#pop'),
-            terminator_tuple,
-        ],
-        'error-propagations': [
-            (r'(' + iden_rex + ')(\s*)(:)(\s*)(not)?(\s+)(out|in)(\s+)(propagation)(\s*)({)',
-             bygroups(Name.Variable.Class, Whitespace, Punctuation, Whitespace, Keyword.Type, Whitespace, Keyword.Type,
-                      Whitespace, Keyword.Type, Whitespace, Punctuation), 'error-propagation-list'),
-            (r'(flows)(\s+)', bygroups(Keyword.Namespace, Whitespace), 'error-propagation-flows'),
-            (r'(end)(\s+)(propagations)(\s*)(;)(\s+)',
-             bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace, Punctuation, Whitespace), '#pop'),
-            comment_whitespace_tuple,
-        ],
-        'error-propagation-flows': [
-            (r'(' + iden_rex + ')(\s*)(:)(\s*)(error)(\s+)(source|sink|path)(\s+)(' + iden_rex + ')(\s*)({)',
-             bygroups(Name.Variable, Whitespace, Punctuation, Whitespace, Keyword.Type, Whitespace, Keyword.Type,
-                      Whitespace, Name.Variable.Class, Whitespace, Punctuation), 'error-propagation-list'),
-            # Exact same syntax as propagation list, so we reuse it here
-            (r'(\s*)(->)(\s*)(' + iden_rex + ')(\s*)({)',
-             bygroups(Whitespace, Operator, Whitespace, Name.Variable.Class, Whitespace, Punctuation),
-             'error-propagation-list'),
-            (r'(end)(\s+)(propagations)(\s*)(;)(\s+)',
-             bygroups(Keyword.Namespace, Whitespace, Keyword.Namespace, Whitespace, Punctuation, Whitespace), '#pop:2'),
-            comment_whitespace_tuple,
-        ],
-        'error-propagation-list': [
-            (r'\s*(,)\s*', Punctuation),
-            (r'[a-zA-Z_]\w*', Name.Attribute),  # See comment in error-types
-            (r'(})(;)?(\s*)', bygroups(Punctuation, Punctuation, Whitespace), '#pop')
-        ],
-        'with-list': [
-            (r'\s*(,)\s*', Punctuation),
-            (r'[a-zA-Z_]\w*', Name.Namespace),
-            terminator_tuple,
-        ],
-        'package-declaration': [
-            text_tuple,
-            (r'(implementation)', Keyword.Declaration),
-            (r'(' + iden_rex + r')(;)', bygroups(Name.Class, Punctuation), '#pop'),
-            (iden_rex, Name.Class, '#pop'),
-        ],
-        'declaration': [
-            text_tuple,
-            (r'(in|out|event|data)', Keyword.Type),
-            (r'(flow|path|port|thread)', Keyword.Type),
-            (class_iden_rex, bygroups(Name.Class, Punctuation, Name.Entity)),
-            (r'(' + iden_rex + r')(\s+)(->|<-|<->)(\s+)(' + iden_rex + r')',
-             bygroups(Name.Variable, Whitespace, Operator, Whitespace, Name.Variable)),
-            (iden_rex, Name.Function),
-            (r'({)(\s+)', bygroups(Punctuation, Whitespace), 'property-constant-declaration'),
-            (r'}', Punctuation),
-            terminator_tuple,
-        ],
-        'applies-to': [
-            text_tuple,
-            (r'\(', Punctuation),
-            (r'\s*(,)\s*', Punctuation),
-            (r'\s*(\*\*)\s*', Operator),
-            (keyword_rex, Keyword.Type),
-            (r'(\{)(' + iden_rex + r')(\})', bygroups(Punctuation, Name.Class, Punctuation)),
-            (r'\)', Punctuation, '#pop:2'),
-        ],
-        'property-value': [
-            (r'[0-9]+', Number.Integer),
-            (r'[0-9]+\.[0-9]*', Number.Float),
-            (r'(reference)(\()(' + iden_rex + ')(\))',
-             bygroups(Keyword.Declaration, Punctuation, Name.Variable.Instance, Punctuation)),
-            (r'"[^"]*"', Literal.String.Double),
-            (r'(\s*)(ms)(\s*)', bygroups(Whitespace, Literal, Whitespace)),
-            (r'(\s*)(\.\.)(\s+)', bygroups(Whitespace, Operator, Whitespace)),
-            (class_iden_rex, bygroups(Name.Class, Punctuation, Name.Constant)),
-            (iden_rex, Name.Constant),
-        ],
-        'applies-to-property-value': [
-            (r'(\s*)(applies to)(\s+)', bygroups(Whitespace, Keyword, Whitespace), 'applies-to'),
-            include('property-value'),
-        ],
-        'property-section-property-value': [
-            include('property-value'),
-            terminator_tuple,
-        ],
-        'property-constant-value': [
-            include('property-value'),
-            (r'(;)(\s+)', bygroups(Punctuation, Whitespace), '#pop:2')
-        ],
-        'aggregate-property-constant-list': [
-            (r'(' + iden_rex + r')(\s*)(=>)(\s*)', bygroups(Name.Class, Whitespace, Operator, Whitespace)),
-            include('property-value'),
-            (r'\s*;\s*', Punctuation),
-            (r'(\];)(\s+)', bygroups(Punctuation, Whitespace), '#pop:2'),
-            (r'(\])(\s+)(applies)(\s+)(to)(\s+)(' + iden_rex + ')(;)(\s+)',
-             bygroups(Punctuation, Whitespace, Keyword.Declaration, Whitespace, Keyword.Declaration, Whitespace,
-                      Name.Variable.Instance, Punctuation, Whitespace), '#pop'),
-        ],
-        'property-declaration': [
-            text_tuple,
-            (r'(' + iden_rex + r')(\s*)(=>)(\s*)', bygroups(Name.Class, Whitespace, Operator, Whitespace),
-             'applies-to-property-value'),
-            terminator_tuple,
-        ],
-        'property-constant-declaration': [
-            text_tuple,
-            (class_iden_rex + r'(\s*)(=>)(\s*)(\[)(\s*)',
-             bygroups(Name.Class, Punctuation, Name.Constant, Whitespace, Operator, Whitespace, Punctuation,
-                      Whitespace), 'aggregate-property-constant-list'),
-            (r'(' + iden_rex + r')(\s*)(=>)(\s*)(\[)(\s*)',
-             bygroups(Name.Class, Whitespace, Operator, Whitespace, Punctuation, Whitespace),
-             'aggregate-property-constant-list'),
-            (class_iden_rex + r'(\s*)(=>)(\s*)',
-             bygroups(Name.Class, Punctuation, Name.Constant, Whitespace, Operator, Whitespace),
-             'property-constant-value'),
-            (r'(' + iden_rex + r')(\s*)(=>)(\s*)', bygroups(Name.Class, Whitespace, Operator, Whitespace),
-             'property-constant-value'),
-        ],
-        'property-set': [
-            with_tuple,
-            (r'(' + iden_rex + r')(\s+)(is)(\s+)', bygroups(Name.Class, Whitespace, Keyword.Namespace, Whitespace)),
-            (definition_rex + r'(constant)', bygroups(Name.Variable.Global, Punctuation, Keyword),
-             'property-constant-declaration'),
-            (definition_rex, bygroups(Name.Variable.Global, Punctuation), 'property-declaration'),
-            (r'(end)(\s+)(' + iden_rex + r')(;)', bygroups(Keyword.Namespace, Whitespace, Name.Class, Punctuation)),
-        ],
-        'property-section': [
-            text_tuple,
-            comment_whitespace_tuple,
-            (class_iden_rex + r'(\s*)(=>)(\s*)(\[)(\s*)',
-             bygroups(Name.Class, Punctuation, Name.Constant, Whitespace, Operator, Whitespace, Punctuation,
-                      Whitespace), 'aggregate-property-constant-list'),
-            (class_iden_rex + r'(\s*)(=>)(\s*)',
-             bygroups(Name.Class, Punctuation, Name.Class, Whitespace, Operator, Whitespace),
-             'property-section-property-value'),
-            (r'(' + iden_rex + r')(\s*)(=>)(\s*)', bygroups(Name.Class, Whitespace, Operator, Whitespace),
-             'property-section-property-value'),
-            (r'(\*\*})(\s*)(;)', bygroups(Punctuation, Whitespace, Punctuation), '#pop'),
-            (r'', Generic.Error, '#pop'),
+        'continuetext': [
+            include('commentsandwhitespace'),
+            (r'(?=/)', Text),
+            default('#pop')
         ],
         'root': [
-            (r'(\n\s*|\t)', Whitespace),
-            comment_tuple,
-            (r'(package)(\s+)', bygroups(Keyword.Namespace, Text), 'packageOrSystem'),
-            (r'(public|private)', Keyword.Namespace),
-            with_tuple,
-            (r'(annex)(\s+)', bygroups(Keyword.Namespace, Text), 'annex'),
-            (keyword_rex + r'(\s+)', bygroups(Keyword.Type, Text), 'package-declaration'),
-            (r'(subcomponents|connections|features|flows)(\s+)', bygroups(Keyword.Namespace, Whitespace)),
-            (definition_rex, bygroups(Name.Variable, Punctuation), 'declaration'),
-            (r'(properties)(\s*)', bygroups(Keyword.Namespace, Whitespace), 'property-section'),
-            (r'(end)(\s+)', bygroups(Keyword.Namespace, Whitespace), 'package-declaration'),
-            (r'(property set)(\s+)', bygroups(Keyword.Namespace, Whitespace), 'property-set'),
+            include('commentsandwhitespace'),
+            (r'\+\+|--|~|&&|\?|:|\|\||\\(?=\n)|'
+             r'(<<|>>>?|=>|==?|!=?|[-<>+*%&|^/])=?', Operator, 'continuetext'),
+            (r'\.\.\.', Punctuation),
+            (r'[{(\[;,]', Punctuation, 'continuetext'),
+            (r'[})\].]', Punctuation),
+            (r'(if|then|else|for|while|do|until|repeat|switch|'
+             r'case|default|break|continue|exit|return|self|other|noone|all|global|local|mod|div|not|'
+             r'and|or|xor|enum|end)\b', Keyword, 'continuetext'),
+            (r'(var|globalvar|with)\b', Keyword.Declaration, 'continuetext'),
+
+            (r'(true|false|undefined)\b', Keyword.Constant),
+            (r'(abs|achievement_available|achievement_event|achievement_get_challenges|'
+             r'achievement_get_info|achievement_get_pic|achievement_increment|achievement_load_friends|'
+             r'achievement_load_leaderboard|achievement_load_progress|achievement_login|'
+             r'achievement_login_status|achievement_logout|achievement_post|achievement_post_score|'
+             r'achievement_reset|achievement_send_challenge|achievement_show|achievement_show_achievements|'
+             r'achievement_show_challenge_notifications|achievement_show_leaderboards|action_another_room|'
+             r'action_bounce|action_change_object|action_color|action_colour|action_create_object|'
+             r'action_create_object_motion|action_create_object_random|action_current_room|action_draw_arrow|'
+             r'action_draw_background|action_draw_ellipse|action_draw_ellipse_gradient|action_draw_gradient_hor|'
+             r'action_draw_gradient_vert|action_draw_health|action_draw_life|action_draw_life_images|'
+             r'action_draw_line|action_draw_rectangle|action_draw_score|action_draw_sprite|action_draw_text|'
+             r'action_draw_text_transformed|action_draw_variable|action_effect|action_end_game|'
+             r'action_end_sound|action_execute_script|action_font|action_fullscreen|action_highscore_clear|'
+             r'action_if|action_if_aligned|action_if_collision|action_if_dice|action_if_empty|action_if_health|'
+             r'action_if_life|action_if_mouse|action_if_next_room|action_if_number|action_if_object|'
+             r'action_if_previous_room|action_if_question|action_if_score|action_if_sound|'
+             r'action_if_variable|action_inherited|action_kill_object|action_kill_position|'
+             r'action_linear_step|action_load_game|action_message|action_move|action_move_contact|'
+             r'action_move_point|action_move_random|action_move_start|action_move_to|action_next_room|'
+             r'action_partemit_burst|action_partemit_create|action_partemit_destroy|action_partemit_stream|'
+             r'action_partsyst_clear|action_partsyst_create|action_partsyst_destroy|action_parttype_color|'
+             r'action_parttype_colour|action_parttype_create|action_parttype_gravity|action_parttype_life|'
+             r'action_parttype_secondary|action_parttype_speed|action_path|action_path_end|action_path_position|'
+             r'action_path_speed|action_potential_step|action_previous_room|action_replace_background|'
+             r'action_replace_sound|action_replace_sprite|action_restart_game|action_reverse_xdir|'
+             r'action_reverse_ydir|action_save_game|action_set_alarm|action_set_cursor|action_set_friction|'
+             r'action_set_gravity|action_set_health|action_set_hspeed|action_set_life|action_set_motion|'
+             r'action_set_score|action_set_timeline_position|action_set_timeline_speed|action_set_vspeed|'
+             r'action_snap|action_snapshot|action_sound|action_sprite_color|action_sprite_colour|'
+             r'action_sprite_set|action_sprite_transform|action_timeline_pause|action_timeline_set|'
+             r'action_timeline_start|action_timeline_stop|action_webpage|action_wrap|ads_disable|'
+             r'ads_enable|ads_engagement_active|ads_engagement_available|ads_engagement_launch|'
+             r'ads_event|ads_event_preload|ads_get_display_height|ads_get_display_width|'
+             r'ads_interstitial_available|ads_interstitial_display|ads_move|ads_set_reward_callback|'
+             r'ads_setup|analytics_event|analytics_event_ext|angle_difference|ansi_char|'
+             r'application_get_position|application_surface_draw_enable|application_surface_enable|'
+             r'application_surface_is_enabled|arccos|arcsin|arctan|arctan2|array_get|array_get_2D|'
+             r'array_height_2d|array_length_1d|array_length_2d|array_set|array_set_2D|array_set_2D_post|'
+             r'array_set_2D_pre|array_set_post|array_set_pre|asset_get_index|asset_get_type|'
+             r'audio_channel_num|audio_create_buffer_sound|audio_create_play_queue|audio_create_stream|'
+             r'audio_create_sync_group|audio_debug|audio_destroy_stream|audio_destroy_sync_group|'
+             r'audio_emitter_create|audio_emitter_exists|audio_emitter_falloff|audio_emitter_free|'
+             r'audio_emitter_gain|audio_emitter_get_gain|audio_emitter_get_listener_mask|'
+             r'audio_emitter_get_pitch|audio_emitter_get_vx|audio_emitter_get_vy|audio_emitter_get_vz|'
+             r'audio_emitter_get_x|audio_emitter_get_y|audio_emitter_get_z|audio_emitter_pitch|'
+             r'audio_emitter_position|audio_emitter_set_listener_mask|audio_emitter_velocity|audio_exists|'
+             r'audio_falloff_set_model|audio_free_buffer_sound|audio_free_play_queue|audio_get_listener_count|'
+             r'audio_get_listener_info|audio_get_listener_mask|audio_get_master_gain|audio_get_name|'
+             r'audio_get_recorder_count|audio_get_recorder_info|audio_get_type|audio_group_is_loaded|'
+             r'audio_group_load|audio_group_load_progress|audio_group_name|audio_group_set_gain|'
+             r'audio_group_stop_all|audio_group_unload|audio_is_paused|audio_is_playing|'
+             r'audio_listener_get_data|audio_listener_orientation|audio_listener_position|'
+             r'audio_listener_set_orientation|audio_listener_set_position|audio_listener_set_velocity|'
+             r'audio_listener_velocity|audio_master_gain|audio_pause_all|audio_pause_sound|'
+             r'audio_pause_sync_group|audio_play_in_sync_group|audio_play_sound|audio_play_sound_at|'
+             r'audio_play_sound_on|audio_queue_sound|audio_resume_all|audio_resume_sound|'
+             r'audio_resume_sync_group|audio_set_listener_mask|audio_set_master_gain|audio_sound_gain|'
+             r'audio_sound_get_gain|audio_sound_get_listener_mask|audio_sound_get_pitch|'
+             r'audio_sound_get_track_position|audio_sound_length|audio_sound_pitch|'
+             r'audio_sound_set_listener_mask|audio_sound_set_track_position|audio_start_recording|'
+             r'audio_start_sync_group|audio_stop_all|audio_stop_recording|audio_stop_sound|'
+             r'audio_stop_sync_group|audio_sync_group_debug|audio_sync_group_get_track_pos|'
+             r'audio_sync_group_is_playing|audio_system|background_add|background_assign|'
+             r'background_create_color|background_create_colour|background_create_from_surface|'
+             r'background_create_gradient|background_delete|background_duplicate|background_exists|'
+             r'background_get_height|background_get_name|background_get_texture|background_get_uvs|'
+             r'background_get_width|background_replace|background_save|background_set_alpha_from_background|'
+             r'base64_decode|base64_encode|browser_input_capture|buffer_async_group_begin|'
+             r'buffer_async_group_end|buffer_async_group_option|buffer_base64_decode|'
+             r'buffer_base64_decode_ext|buffer_base64_encode|buffer_copy|buffer_copy_from_vertex_buffer|'
+             r'buffer_create|buffer_create_from_vertex_buffer|buffer_create_from_vertex_buffer_ext|'
+             r'buffer_delete|buffer_fill|buffer_get_address|buffer_get_size|buffer_get_surface|buffer_load|'
+             r'buffer_load_async|buffer_load_ext|buffer_load_partial|buffer_md5|buffer_peek|buffer_poke|'
+             r'buffer_read|buffer_resize|buffer_save|buffer_save_async|buffer_save_ext|buffer_seek|'
+             r'buffer_set_surface|buffer_sha1|buffer_sizeof|buffer_tell|buffer_write|ceil|choose|chr|clamp|'
+             r'clickable_add|clickable_add_ext|clickable_change|clickable_change_ext|clickable_delete|'
+             r'clickable_exists|clickable_set_style|clipboard_get_text|clipboard_has_text|clipboard_set_text|'
+             r'cloud_file_save|cloud_string_save|cloud_synchronise|code_is_compiled|collision_circle|'
+             r'collision_ellipse|collision_line|collision_point|collision_rectangle|color_get_blue|'
+             r'color_get_green|color_get_hue|color_get_red|color_get_saturation|color_get_value|colour_get_blue|'
+             r'colour_get_green|colour_get_hue|colour_get_red|colour_get_saturation|colour_get_value|cos|'
+             r'd3d_draw_block|d3d_draw_cone|d3d_draw_cylinder|d3d_draw_ellipsoid|d3d_draw_floor|d3d_draw_wall|'
+             r'd3d_end|d3d_light_define_ambient|d3d_light_define_direction|d3d_light_define_point|'
+             r'd3d_light_enable|d3d_model_block|d3d_model_clear|d3d_model_cone|d3d_model_create|'
+             r'd3d_model_cylinder|d3d_model_destroy|d3d_model_draw|d3d_model_ellipsoid|d3d_model_floor|'
+             r'd3d_model_load|d3d_model_primitive_begin|d3d_model_primitive_end|d3d_model_save|d3d_model_vertex|'
+             r'd3d_model_vertex_color|d3d_model_vertex_colour|d3d_model_vertex_normal|'
+             r'd3d_model_vertex_normal_color|d3d_model_vertex_normal_colour|'
+             r'd3d_model_vertex_normal_texture|d3d_model_vertex_normal_texture_color|'
+             r'd3d_model_vertex_normal_texture_colour|d3d_model_vertex_texture|d3d_model_vertex_texture_color|'
+             r'd3d_model_vertex_texture_colour|d3d_model_wall|d3d_primitive_begin|d3d_primitive_begin_texture|'
+             r'd3d_primitive_end|d3d_set_culling|d3d_set_depth|d3d_set_fog|d3d_set_hidden|d3d_set_lighting|'
+             r'd3d_set_perspective|d3d_set_projection|d3d_set_projection_ext|d3d_set_projection_ortho|'
+             r'd3d_set_projection_perspective|d3d_set_shading|d3d_set_zwriteenable|d3d_start|'
+             r'd3d_transform_add_rotation_axis|d3d_transform_add_rotation_x|d3d_transform_add_rotation_y|'
+             r'd3d_transform_add_rotation_z|d3d_transform_add_scaling|d3d_transform_add_translation|'
+             r'd3d_transform_set_identity|d3d_transform_set_rotation_axis|d3d_transform_set_rotation_x|'
+             r'd3d_transform_set_rotation_y|d3d_transform_set_rotation_z|d3d_transform_set_scaling|'
+             r'd3d_transform_set_translation|d3d_transform_stack_clear|d3d_transform_stack_discard|'
+             r'd3d_transform_stack_empty|d3d_transform_stack_pop|d3d_transform_stack_push|'
+             r'd3d_transform_stack_top|d3d_transform_vertex|d3d_vertex|d3d_vertex_color|d3d_vertex_colour|'
+             r'd3d_vertex_normal|d3d_vertex_normal_color|d3d_vertex_normal_colour|d3d_vertex_normal_texture|'
+             r'd3d_vertex_normal_texture_color|d3d_vertex_normal_texture_colour|d3d_vertex_texture|'
+             r'd3d_vertex_texture_color|d3d_vertex_texture_colour|darccos|darcsin|darctan|darctan2|'
+             r'date_compare_date|date_compare_datetime|date_compare_time|date_create_datetime|'
+             r'date_current_datetime|date_date_of|date_date_string|date_datetime_string|date_day_span|'
+             r'date_days_in_month|date_days_in_year|date_get_day|date_get_day_of_year|date_get_hour|'
+             r'date_get_hour_of_year|date_get_minute|date_get_minute_of_year|date_get_month|date_get_second|'
+             r'date_get_second_of_year|date_get_timezone|date_get_week|date_get_weekday|date_get_year|'
+             r'date_hour_span|date_inc_day|date_inc_hour|date_inc_minute|date_inc_month|date_inc_second|'
+             r'date_inc_week|date_inc_year|date_is_today|date_leap_year|date_minute_span|date_month_span|'
+             r'date_second_span|date_set_timezone|date_time_of|date_time_string|date_valid_datetime|'
+             r'date_week_span|date_year_span|dcos|degtorad|device_get_tilt_x|device_get_tilt_y|'
+             r'device_get_tilt_z|device_ios_get_image|device_ios_get_imagename|device_is_keypad_open|'
+             r'device_mouse_check_button|device_mouse_check_button_pressed|device_mouse_check_button_released|'
+             r'device_mouse_dbclick_enable|device_mouse_raw_x|device_mouse_raw_y|device_mouse_x|'
+             r'device_mouse_x_to_gui|device_mouse_y|device_mouse_y_to_gui|directory_create|directory_destroy|'
+             r'directory_exists|display_get_dpi_x|display_get_dpi_y|display_get_gui_height|'
+             r'display_get_gui_width|display_get_height|display_get_orientation|display_get_width|'
+             r'display_mouse_get_x|display_mouse_get_y|display_mouse_set|display_reset|display_set_gui_maximise|'
+             r'display_set_gui_size|distance_to_object|distance_to_point|dot_product|dot_product_3d|'
+             r'dot_product_3d_normalised|dot_product_normalised|draw_arrow|draw_background|draw_background_ext|'
+             r'draw_background_general|draw_background_part|draw_background_part_ext|draw_background_stretched|'
+             r'draw_background_stretched_ext|draw_background_tiled|draw_background_tiled_ext|draw_button|'
+             r'draw_circle|draw_circle_color|draw_circle_colour|draw_clear|draw_clear_alpha|draw_ellipse|'
+             r'draw_ellipse_color|draw_ellipse_colour|draw_enable_alphablend|draw_enable_drawevent|'
+             r'draw_enable_swf_aa|draw_get_alpha|draw_get_alpha_test|draw_get_alpha_test_ref_value|'
+             r'draw_get_color|draw_get_colour|draw_get_swf_aa_level|draw_getpixel|draw_getpixel_ext|'
+             r'draw_healthbar|draw_highscore|draw_line|draw_line_color|draw_line_colour|draw_line_width|'
+             r'draw_line_width_color|draw_line_width_colour|draw_path|draw_point|draw_point_color|'
+             r'draw_point_colour|draw_primitive_begin|draw_primitive_begin_texture|draw_primitive_end|'
+             r'draw_rectangle|draw_rectangle_color|draw_rectangle_colour|draw_roundrect|draw_roundrect_color|'
+             r'draw_roundrect_color_ext|draw_roundrect_colour|draw_roundrect_colour_ext|draw_roundrect_ext|'
+             r'draw_self|draw_set_alpha|draw_set_alpha_test|draw_set_alpha_test_ref_value|draw_set_blend_mode|'
+             r'draw_set_blend_mode_ext|draw_set_circle_precision|draw_set_color|draw_set_color_write_enable|'
+             r'draw_set_colour|draw_set_colour_write_enable|draw_set_font|draw_set_halign|'
+             r'draw_set_swf_aa_level|draw_set_valign|draw_skeleton|draw_skeleton_collision|draw_skeleton_time|'
+             r'draw_sprite|draw_sprite_ext|draw_sprite_general|draw_sprite_part|draw_sprite_part_ext|'
+             r'draw_sprite_pos|draw_sprite_stretched|draw_sprite_stretched_ext|draw_sprite_tiled|'
+             r'draw_sprite_tiled_ext|draw_surface|draw_surface_ext|draw_surface_general|draw_surface_part|'
+             r'draw_surface_part_ext|draw_surface_stretched|draw_surface_stretched_ext|draw_surface_tiled|'
+             r'draw_surface_tiled_ext|draw_text|draw_text_color|draw_text_colour|draw_text_ext|'
+             r'draw_text_ext_color|draw_text_ext_colour|draw_text_ext_transformed|'
+             r'draw_text_ext_transformed_color|draw_text_ext_transformed_colour|draw_text_transformed|'
+             r'draw_text_transformed_color|draw_text_transformed_colour|draw_texture_flush|draw_triangle|'
+             r'draw_triangle_color|draw_triangle_colour|draw_vertex|draw_vertex_color|draw_vertex_colour|'
+             r'draw_vertex_texture|draw_vertex_texture_color|draw_vertex_texture_colour|ds_exists|ds_grid_add|'
+             r'ds_grid_add_disk|ds_grid_add_grid_region|ds_grid_add_region|ds_grid_clear|ds_grid_copy|'
+             r'ds_grid_create|ds_grid_destroy|ds_grid_get|ds_grid_get_disk_max|ds_grid_get_disk_mean|'
+             r'ds_grid_get_disk_min|ds_grid_get_disk_sum|ds_grid_get_max|ds_grid_get_mean|ds_grid_get_min|'
+             r'ds_grid_get_pre|ds_grid_get_sum|ds_grid_height|ds_grid_multiply|ds_grid_multiply_disk|'
+             r'ds_grid_multiply_grid_region|ds_grid_multiply_region|ds_grid_read|ds_grid_resize|'
+             r'ds_grid_set|ds_grid_set_disk|ds_grid_set_grid_region|ds_grid_set_pre|ds_grid_set_region|'
+             r'ds_grid_shuffle|ds_grid_sort|ds_grid_value_disk_exists|ds_grid_value_disk_x|'
+             r'ds_grid_value_disk_y|ds_grid_value_exists|ds_grid_value_x|ds_grid_value_y|ds_grid_width|'
+             r'ds_grid_write|ds_list_add|ds_list_clear|ds_list_copy|ds_list_create|ds_list_delete|'
+             r'ds_list_destroy|ds_list_empty|ds_list_find_index|ds_list_find_value|ds_list_insert|'
+             r'ds_list_mark_as_list|ds_list_mark_as_map|ds_list_read|ds_list_replace|ds_list_set|'
+             r'ds_list_set_post|ds_list_set_pre|ds_list_shuffle|ds_list_size|ds_list_sort|ds_list_write|'
+             r'ds_map_add|ds_map_add_list|ds_map_add_map|ds_map_clear|ds_map_copy|ds_map_create|'
+             r'ds_map_delete|ds_map_destroy|ds_map_empty|ds_map_exists|ds_map_find_first|ds_map_find_last|'
+             r'ds_map_find_next|ds_map_find_previous|ds_map_find_value|ds_map_read|ds_map_replace|'
+             r'ds_map_replace_list|ds_map_replace_map|ds_map_secure_load|ds_map_secure_save|ds_map_set|'
+             r'ds_map_set_post|ds_map_set_pre|ds_map_size|ds_map_write|ds_priority_add|'
+             r'ds_priority_change_priority|ds_priority_clear|ds_priority_copy|ds_priority_create|'
+             r'ds_priority_delete_max|ds_priority_delete_min|ds_priority_delete_value|ds_priority_destroy|'
+             r'ds_priority_empty|ds_priority_find_max|ds_priority_find_min|ds_priority_find_priority|'
+             r'ds_priority_read|ds_priority_size|ds_priority_write|ds_queue_clear|ds_queue_copy|'
+             r'ds_queue_create|ds_queue_dequeue|ds_queue_destroy|ds_queue_empty|ds_queue_enqueue|'
+             r'ds_queue_head|ds_queue_read|ds_queue_size|ds_queue_tail|ds_queue_write|ds_set_precision|'
+             r'ds_stack_clear|ds_stack_copy|ds_stack_create|ds_stack_destroy|ds_stack_empty|ds_stack_pop|'
+             r'ds_stack_push|ds_stack_read|ds_stack_size|ds_stack_top|ds_stack_write|dsin|dtan|effect_clear|'
+             r'effect_create_above|effect_create_below|environment_get_variable|event_inherited|event_perform|'
+             r'event_perform_object|event_user|exp|external_call|external_define|external_free|'
+             r'facebook_accesstoken|facebook_check_permission|facebook_dialog|facebook_graph_request|'
+             r'facebook_init|facebook_launch_offerwall|facebook_login|facebook_logout|facebook_post_message|'
+             r'facebook_request_publish_permissions|facebook_request_read_permissions|facebook_send_invite|'
+             r'facebook_status|facebook_user_id|file_attributes|file_bin_close|file_bin_open|file_bin_position|'
+             r'file_bin_read_byte|file_bin_rewrite|file_bin_seek|file_bin_size|file_bin_write_byte|file_copy|'
+             r'file_delete|file_exists|file_find_close|file_find_first|file_find_next|file_rename|'
+             r'file_text_close|file_text_eof|file_text_eoln|file_text_open_append|file_text_open_from_string|'
+             r'file_text_open_read|file_text_open_write|file_text_read_real|file_text_read_string|'
+             r'file_text_readln|file_text_write_real|file_text_write_string|file_text_writeln|'
+             r'filename_change_ext|filename_dir|filename_drive|filename_ext|filename_name|filename_path|floor|'
+             r'font_add|font_add_sprite|font_add_sprite_ext|font_delete|font_exists|font_get_bold|'
+             r'font_get_first|font_get_fontname|font_get_italic|font_get_last|font_get_name|font_get_size|'
+             r'font_get_texture|font_get_uvs|font_replace|font_replace_sprite|font_replace_sprite_ext|'
+             r'font_set_cache_size|frac|game_end|game_load|game_load_buffer|game_restart|game_save|'
+             r'game_save_buffer|gamepad_axis_count|gamepad_axis_value|gamepad_button_check|'
+             r'gamepad_button_check_pressed|gamepad_button_check_released|gamepad_button_count|'
+             r'gamepad_button_value|gamepad_get_axis_deadzone|gamepad_get_button_threshold|'
+             r'gamepad_get_description|gamepad_get_device_count|gamepad_is_connected|gamepad_is_supported|'
+             r'gamepad_set_axis_deadzone|gamepad_set_button_threshold|gamepad_set_color|gamepad_set_colour|'
+             r'gamepad_set_vibration|get_integer|get_integer_async|get_login_async|get_open_filename|'
+             r'get_open_filename_ext|get_save_filename|get_save_filename_ext|get_string|get_string_async|'
+             r'get_timer|gml_release_mode|highscore_add|highscore_clear|highscore_name|highscore_value|'
+             r'http_get|http_get_file|http_post_string|http_request|iap_acquire|iap_activate|iap_consume|'
+             r'iap_enumerate_products|iap_is_purchased|iap_product_details|iap_purchase_details|iap_restore_all|'
+             r'iap_status|immersion_play_effect|immersion_stop|ini_close|ini_key_delete|ini_key_exists|'
+             r'ini_open|ini_open_from_string|ini_read_real|ini_read_string|ini_section_delete|'
+             r'ini_section_exists|ini_write_real|ini_write_string|instance_activate_all|'
+             r'instance_activate_object|instance_activate_region|instance_change|instance_copy|instance_create|'
+             r'instance_deactivate_all|instance_deactivate_object|instance_deactivate_region|instance_destroy|'
+             r'instance_exists|instance_find|instance_furthest|instance_nearest|instance_number|instance_place|'
+             r'instance_position|io_clear|irandom|irandom_range|is_array|is_int32|is_int64|is_matrix|is_ptr|'
+             r'is_real|is_string|is_undefined|is_vec3|is_vec4|joystick_axes|joystick_buttons|'
+             r'joystick_check_button|joystick_direction|joystick_exists|joystick_has_pov|joystick_name|'
+             r'joystick_pov|joystick_rpos|joystick_upos|joystick_vpos|joystick_xpos|joystick_ypos|joystick_zpos|'
+             r'json_decode|json_encode|keyboard_check|keyboard_check_direct|keyboard_check_pressed|'
+             r'keyboard_check_released|keyboard_clear|keyboard_get_map|keyboard_get_numlock|keyboard_key_press|'
+             r'keyboard_key_release|keyboard_set_map|keyboard_set_numlock|keyboard_unset_map|lengthdir_x|'
+             r'lengthdir_y|lerp|ln|log10|log2|logn|make_color_hsv|make_color_rgb|make_colour_hsv|'
+             r'make_colour_rgb|math_set_epsilon|matrix_build|matrix_get|matrix_multiply|matrix_set|max|md5_file|'
+             r'md5_string_unicode|md5_string_utf8|mean|median|merge_color|merge_colour|message_caption|'
+             r'min|motion_add|motion_set|mouse_check_button|mouse_check_button_pressed|'
+             r'mouse_check_button_released|mouse_clear|mouse_wheel_down|mouse_wheel_up|move_bounce|'
+             r'move_bounce_all|move_bounce_solid|move_contact|move_contact_all|move_contact_solid|'
+             r'move_outside_all|move_outside_solid|move_random|move_snap|move_towards_point|move_wrap|'
+             r'mp_grid_add_cell|mp_grid_add_instances|mp_grid_add_rectangle|mp_grid_clear_all|'
+             r'mp_grid_clear_cell|mp_grid_clear_rectangle|mp_grid_create|mp_grid_destroy|mp_grid_draw|'
+             r'mp_grid_get_cell|mp_grid_path|mp_grid_to_ds_grid|mp_linear_path|mp_linear_path_object|'
+             r'mp_linear_step|mp_linear_step_object|mp_potential_path|mp_potential_path_object|'
+             r'mp_potential_settings|mp_potential_step|mp_potential_step_object|network_connect|'
+             r'network_connect_raw|network_create_server|network_create_server_raw|network_create_socket|'
+             r'network_destroy|network_destroy|network_get_address|network_resolve|network_send_broadcast|'
+             r'network_send_packet|network_send_raw|network_send_udp|network_send_udp_raw|network_set_config|'
+             r'network_set_timeout|object_exists|object_get_depth|object_get_mask|object_get_name|'
+             r'object_get_parent|object_get_persistent|object_get_physics|object_get_solid|object_get_sprite|'
+             r'object_get_visible|object_is_ancestor|object_set_depth|object_set_mask|object_set_persistent|'
+             r'object_set_solid|object_set_sprite|object_set_visible|ord|os_get_config|os_get_info|'
+             r'os_get_language|os_get_region|os_is_network_connected|os_is_paused|os_lock_orientation|'
+             r'os_powersave_enable|parameter_count|parameter_string|part_emitter_burst|part_emitter_clear|'
+             r'part_emitter_create|part_emitter_destroy|part_emitter_destroy_all|part_emitter_exists|'
+             r'part_emitter_region|part_emitter_stream|part_particles_clear|part_particles_count|'
+             r'part_particles_create|part_particles_create_color|part_particles_create_colour|'
+             r'part_system_automatic_draw|part_system_automatic_update|part_system_clear|'
+             r'part_system_create|part_system_depth|part_system_destroy|part_system_draw_order|'
+             r'part_system_drawit|part_system_exists|part_system_position|part_system_update|'
+             r'part_type_alpha|part_type_alpha1|part_type_alpha2|part_type_alpha3|part_type_blend|'
+             r'part_type_clear|part_type_color|part_type_color1|part_type_color2|part_type_color3|'
+             r'part_type_color_hsv|part_type_color_mix|part_type_color_rgb|part_type_colour|'
+             r'part_type_colour1|part_type_colour2|part_type_colour3|part_type_colour_hsv|'
+             r'part_type_colour_mix|part_type_colour_rgb|part_type_create|part_type_death|'
+             r'part_type_destroy|part_type_direction|part_type_exists|part_type_gravity|part_type_life|'
+             r'part_type_orientation|part_type_scale|part_type_shape|part_type_size|part_type_speed|'
+             r'part_type_sprite|part_type_step|path_add|path_add_point|path_append|path_assign|'
+             r'path_change_point|path_clear_points|path_delete|path_delete_point|path_duplicate|path_end|'
+             r'path_exists|path_flip|path_get_closed|path_get_kind|path_get_length|path_get_name|'
+             r'path_get_number|path_get_point_speed|path_get_point_x|path_get_point_y|path_get_precision|'
+             r'path_get_speed|path_get_x|path_get_y|path_insert_point|path_mirror|path_rescale|path_reverse|'
+             r'path_rotate|path_set_closed|path_set_kind|path_set_precision|path_shift|path_start|'
+             r'physics_apply_angular_impulse|physics_apply_force|physics_apply_impulse|'
+             r'physics_apply_local_force|physics_apply_local_impulse|physics_apply_torque|'
+             r'physics_draw_debug|physics_fixture_add_point|physics_fixture_bind|'
+             r'physics_fixture_bind_ext|physics_fixture_create|physics_fixture_delete|'
+             r'physics_fixture_set_angular_damping|physics_fixture_set_awake|'
+             r'physics_fixture_set_box_shape|physics_fixture_set_chain_shape|'
+             r'physics_fixture_set_circle_shape|physics_fixture_set_collision_group|'
+             r'physics_fixture_set_density|physics_fixture_set_edge_shape|'
+             r'physics_fixture_set_friction|physics_fixture_set_kinematic|'
+             r'physics_fixture_set_linear_damping|physics_fixture_set_polygon_shape|'
+             r'physics_fixture_set_restitution|physics_fixture_set_sensor|physics_get_density|'
+             r'physics_get_friction|physics_get_restitution|physics_joint_delete|'
+             r'physics_joint_distance_create|physics_joint_enable_motor|physics_joint_friction_create|'
+             r'physics_joint_gear_create|physics_joint_get_value|physics_joint_prismatic_create|'
+             r'physics_joint_pulley_create|physics_joint_revolute_create|physics_joint_rope_create|'
+             r'physics_joint_set_value|physics_joint_weld_create|physics_joint_wheel_create|'
+             r'physics_mass_properties|physics_particle_count|physics_particle_create|'
+             r'physics_particle_delete|physics_particle_delete_region_box|'
+             r'physics_particle_delete_region_circle|physics_particle_delete_region_poly|'
+             r'physics_particle_draw|physics_particle_draw_ext|physics_particle_get_damping|'
+             r'physics_particle_get_data|physics_particle_get_data_particle|physics_particle_get_density|'
+             r'physics_particle_get_gravity_scale|physics_particle_get_group_flags|'
+             r'physics_particle_get_max_count|physics_particle_get_radius|physics_particle_group_add_point|'
+             r'physics_particle_group_begin|physics_particle_group_box|physics_particle_group_circle|'
+             r'physics_particle_group_count|physics_particle_group_delete|physics_particle_group_end|'
+             r'physics_particle_group_get_ang_vel|physics_particle_group_get_angle|'
+             r'physics_particle_group_get_centre_x|physics_particle_group_get_centre_y|'
+             r'physics_particle_group_get_data|physics_particle_group_get_inertia|'
+             r'physics_particle_group_get_mass|physics_particle_group_get_vel_x|'
+             r'physics_particle_group_get_vel_y|physics_particle_group_get_x|physics_particle_group_get_y|'
+             r'physics_particle_group_join|physics_particle_group_polygon|'
+             r'physics_particle_set_category_flags|physics_particle_set_damping|'
+             r'physics_particle_set_density|physics_particle_set_flags|'
+             r'physics_particle_set_gravity_scale|physics_particle_set_group_flags|'
+             r'physics_particle_set_max_count|physics_particle_set_radius|physics_pause_enable|'
+             r'physics_remove_fixture|physics_set_density|physics_set_friction|'
+             r'physics_set_restitution|physics_test_overlap|physics_world_create|'
+             r'physics_world_draw_debug|physics_world_gravity|physics_world_update_iterations|'
+             r'physics_world_update_speed|place_empty|place_free|place_meeting|place_snapped|'
+             r'playhaven_add_notification_badge|playhaven_hide_notification_badge|'
+             r'playhaven_position_notification_badge|playhaven_update_notification_badge|'
+             r'pocketchange_display_reward|pocketchange_display_shop|point_direction|point_distance|'
+             r'point_distance_3d|point_in_circle|point_in_rectangle|point_in_triangle|position_change|'
+             r'position_destroy|position_empty|position_meeting|power|push_cancel_local_notification|'
+             r'push_get_first_local_notification|push_get_next_local_notification|push_local_notification|'
+             r'radtodeg|random|random_get_seed|random_range|random_set_seed|randomize|real|'
+             r'rectangle_in_circle|rectangle_in_rectangle|rectangle_in_triangle|room_add|room_assign|'
+             r'room_duplicate|room_exists|room_get_name|room_goto|room_goto_next|room_goto_previous|'
+             r'room_instance_add|room_instance_clear|room_next|room_previous|room_restart|'
+             r'room_set_background|room_set_background_color|room_set_background_colour|room_set_height|'
+             r'room_set_persistent|room_set_view|room_set_view_enabled|room_set_width|room_tile_add|'
+             r'room_tile_add_ext|room_tile_clear|round|screen_save|screen_save_part|script_execute|'
+             r'script_exists|script_get_name|sha1_file|sha1_string_unicode|sha1_string_utf8|'
+             r'shader_enable_corner_id|shader_get_sampler_index|shader_get_uniform|shader_is_compiled|'
+             r'shader_reset|shader_set|shader_set_uniform_f|shader_set_uniform_f_array|'
+             r'shader_set_uniform_i|shader_set_uniform_i_array|shader_set_uniform_matrix|'
+             r'shader_set_uniform_matrix_array|shaders_are_supported|shop_leave_rating|show_debug_message|'
+             r'show_debug_overlay|show_error|show_message|show_message|show_message_async|show_question|'
+             r'show_question_async|sign|sin|skeleton_animation_clear|skeleton_animation_get|'
+             r'skeleton_animation_get_duration|skeleton_animation_get_ext|skeleton_animation_list|'
+             r'skeleton_animation_mix|skeleton_animation_set|skeleton_animation_set_ext|'
+             r'skeleton_attachment_create|skeleton_attachment_get|skeleton_attachment_set|'
+             r'skeleton_bone_data_get|skeleton_bone_data_set|skeleton_bone_state_get|'
+             r'skeleton_bone_state_set|skeleton_collision_draw_set|skeleton_skin_get|'
+             r'skeleton_skin_list|skeleton_skin_set|skeleton_slot_data|sound_delete|sound_exists|'
+             r'sound_fade|sound_get_name|sound_global_volume|sound_isplaying|sound_loop|'
+             r'sound_play|sound_stop|sound_stop_all|sound_volume|sprite_add|sprite_add_from_surface|'
+             r'sprite_assign|sprite_collision_mask|sprite_create_from_surface|sprite_delete|'
+             r'sprite_duplicate|sprite_exists|sprite_get_bbox_bottom|sprite_get_bbox_left|'
+             r'sprite_get_bbox_right|sprite_get_bbox_top|sprite_get_height|sprite_get_name|'
+             r'sprite_get_number|sprite_get_texture|sprite_get_tpe|sprite_get_uvs|sprite_get_width|'
+             r'sprite_get_xoffset|sprite_get_yoffset|sprite_merge|sprite_replace|sprite_save|'
+             r'sprite_save_strip|sprite_set_alpha_from_sprite|sprite_set_cache_size|'
+             r'sprite_set_cache_size_ext|sprite_set_offset|sqr|sqrt|steam_activate_overlay|'
+             r'steam_clear_achievement|steam_create_leaderboard|steam_download_friends_scores|'
+             r'steam_download_scores|steam_download_scores_around_user|steam_file_delete|'
+             r'steam_file_exists|steam_file_persisted|steam_file_read|steam_file_share|steam_file_size|'
+             r'steam_file_write|steam_file_write_file|steam_get_achievement|steam_get_app_id|'
+             r'steam_get_persona_name|steam_get_quota_free|steam_get_quota_total|steam_get_stat_avg_rate|'
+             r'steam_get_stat_float|steam_get_stat_int|steam_get_user_account_id|steam_get_user_steam_id|'
+             r'steam_initialised|steam_is_cloud_enabled_for_account|steam_is_cloud_enabled_for_app|'
+             r'steam_is_overlay_activated|steam_is_overlay_enabled|steam_is_screenshot_requested|'
+             r'steam_is_user_logged_on|steam_publish_workshop_file|steam_reset_all_stats|'
+             r'steam_reset_all_stats_achievements|steam_send_screenshot|steam_set_achievement|'
+             r'steam_set_stat_avg_rate|steam_set_stat_float|steam_set_stat_int|steam_stats_ready|'
+             r'steam_ugc_create_item|steam_ugc_create_query_all|steam_ugc_create_query_all_ex|'
+             r'steam_ugc_create_query_user|steam_ugc_create_query_user_ex|steam_ugc_download|'
+             r'steam_ugc_get_item_install_info|steam_ugc_get_item_update_info|'
+             r'steam_ugc_get_item_update_progress|steam_ugc_get_subscribed_items|'
+             r'steam_ugc_num_subscribed_items|steam_ugc_query_add_excluded_tag|'
+             r'steam_ugc_query_add_required_tag|steam_ugc_query_set_allow_cached_response|'
+             r'steam_ugc_query_set_cloud_filename_filter|steam_ugc_query_set_match_any_tag|'
+             r'steam_ugc_query_set_ranked_by_trend_days|steam_ugc_query_set_return_long_description|'
+             r'steam_ugc_query_set_return_total_only|steam_ugc_query_set_search_text|'
+             r'steam_ugc_request_item_details|steam_ugc_send_query|steam_ugc_set_item_content|'
+             r'steam_ugc_set_item_description|steam_ugc_set_item_preview|steam_ugc_set_item_tags|'
+             r'steam_ugc_set_item_title|steam_ugc_set_item_visibility|steam_ugc_start_item_update|'
+             r'steam_ugc_submit_item_update|steam_ugc_subscribe_item|steam_ugc_unsubscribe_item|'
+             r'steam_upload_score|steam_upload_score_buffer|steam_user_installed_dlc|steam_user_owns_dlc|'
+             r'string|string_byte_at|string_byte_length|string_char_at|string_copy|string_count|'
+             r'string_delete|string_digits|string_format|string_height|string_height_ext|string_insert|'
+             r'string_length|string_letters|string_lettersdigits|string_lower|string_pos|string_repeat|'
+             r'string_replace|string_replace_all|string_set_byte_at|string_upper|string_width|'
+             r'string_width_ext|surface_copy|surface_copy_part|surface_create|surface_create_ext|'
+             r'surface_exists|surface_free|surface_get_height|surface_get_texture|surface_get_width|'
+             r'surface_getpixel|surface_getpixel_ext|surface_reset_target|surface_resize|surface_save|'
+             r'surface_save_part|surface_set_target|surface_set_target_ext|tan|texture_exists|'
+             r'texture_get_height|texture_get_texel_height|texture_get_texel_width|texture_get_width|'
+             r'texture_set_blending|texture_set_interpolation|texture_set_interpolation_ext|'
+             r'texture_set_repeat|texture_set_repeat_ext|texture_set_stage|tile_add|tile_delete|'
+             r'tile_delete_at|tile_exists|tile_find|tile_get_alpha|tile_get_background|tile_get_blend|'
+             r'tile_get_count|tile_get_depth|tile_get_height|tile_get_id|tile_get_ids|'
+             r'tile_get_ids_at_depth|tile_get_left|tile_get_top|tile_get_visible|tile_get_width|'
+             r'tile_get_x|tile_get_xscale|tile_get_y|tile_get_yscale|tile_layer_delete|'
+             r'tile_layer_delete_at|tile_layer_depth|tile_layer_find|tile_layer_hide|tile_layer_shift|'
+             r'tile_layer_show|tile_set_alpha|tile_set_background|tile_set_blend|tile_set_depth|'
+             r'tile_set_position|tile_set_region|tile_set_scale|tile_set_visible|timeline_add|'
+             r'timeline_clear|timeline_delete|timeline_exists|timeline_get_name|timeline_max_moment|'
+             r'timeline_moment_add_script|timeline_moment_clear|timeline_size|url_get_domain|url_open|'
+             r'url_open_ext|url_open_full|vertex_argb|vertex_begin|vertex_colour|vertex_create_buffer|'
+             r'vertex_create_buffer_ext|vertex_create_buffer_from_buffer|'
+             r'vertex_create_buffer_from_buffer_ext|vertex_delete_buffer|vertex_end|vertex_float1|'
+             r'vertex_float2|vertex_float3|vertex_float4|vertex_format_add_colour|vertex_format_add_custom|'
+             r'vertex_format_add_normal|vertex_format_add_position|vertex_format_add_position_3d|'
+             r'vertex_format_add_textcoord|vertex_format_begin|vertex_format_end|vertex_freeze|'
+             r'vertex_get_buffer_size|vertex_get_number|vertex_normal|vertex_position|vertex_position_3d|'
+             r'vertex_submit|vertex_texcoord|vertex_ubyte4|virtual_key_add|virtual_key_delete|'
+             r'virtual_key_hide|virtual_key_show|win8_appbar_add_element|win8_appbar_enable|'
+             r'win8_appbar_remove_element|win8_device_touchscreen_available|'
+             r'win8_license_initialize_sandbox|win8_license_trial_version|win8_livetile_badge_clear|'
+             r'win8_livetile_badge_notification|win8_livetile_notification_begin|'
+             r'win8_livetile_notification_end|win8_livetile_notification_expiry|'
+             r'win8_livetile_notification_image_add|win8_livetile_notification_secondary_begin|'
+             r'win8_livetile_notification_tag|win8_livetile_notification_text_add|'
+             r'win8_livetile_queue_enable|win8_livetile_tile_clear|win8_livetile_tile_notification|'
+             r'win8_search_add_suggestions|win8_search_disable|win8_search_enable|'
+             r'win8_secondarytile_badge_notification|win8_secondarytile_delete|win8_secondarytile_pin|'
+             r'win8_settingscharm_add_entry|win8_settingscharm_add_html_entry|'
+             r'win8_settingscharm_add_xaml_entry|win8_settingscharm_get_xaml_property|'
+             r'win8_settingscharm_remove_entry|win8_settingscharm_set_xaml_property|'
+             r'win8_share_file|win8_share_image|win8_share_screenshot|win8_share_text|win8_share_url|'
+             r'window_center|window_device|window_get_caption|window_get_color|window_get_colour|'
+             r'window_get_cursor|window_get_fullscreen|window_get_height|window_get_visible_rects|'
+             r'window_get_width|window_get_x|window_get_y|window_handle|window_has_focus|'
+             r'window_mouse_get_x|window_mouse_get_y|window_mouse_set|window_set_caption|'
+             r'window_set_color|window_set_colour|window_set_cursor|window_set_fullscreen|'
+             r'window_set_max_height|window_set_max_width|window_set_min_height|window_set_min_width|'
+             r'window_set_position|window_set_rectangle|window_set_size|window_view_mouse_get_x|'
+             r'window_view_mouse_get_y|window_views_mouse_get_x|window_views_mouse_get_y|'
+             r'winphone_license_trial_version|winphone_tile_back_content|winphone_tile_back_content_wide|'
+             r'winphone_tile_back_image|winphone_tile_back_image_wide|winphone_tile_back_title|'
+             r'winphone_tile_background_color|winphone_tile_background_colour|winphone_tile_count|'
+             r'winphone_tile_cycle_images|winphone_tile_front_image|winphone_tile_front_image_small|'
+             r'winphone_tile_front_image_wide|winphone_tile_icon_image|winphone_tile_small_background_image|'
+             r'winphone_tile_small_icon_image|winphone_tile_title|winphone_tile_wide_content|zip_unzip|'
+             r'application_surface|argument|argument0|argument1|argument10|argument11|argument12|argument13|'
+             r'argument14|argument15|argument2|argument3|argument4|argument5|argument6|argument7|argument8|'
+             r'argument9|argument_count|argument_relative|async_load|background_alpha|background_blend|'
+             r'background_color|background_colour|background_foreground|background_height|background_hspeed|'
+             r'background_htiled|background_index|background_showcolor|background_showcolour|'
+             r'background_visible|background_vspeed|background_vtiled|background_width|background_x|'
+             r'background_xscale|background_y|background_yscale|browser_height|browser_width|caption_health|'
+             r'caption_lives|caption_score|current_day|current_hour|current_minute|current_month|'
+             r'current_second|current_time|current_weekday|current_year|cursor_sprite|debug_mode|delta_time|'
+             r'display_aa|error_last|error_occurred|event_action|event_number|event_object|event_type|fps|'
+             r'fps_real|game_display_name|game_id|game_project_name|game_save_id|gamemaker_pro|'
+             r'gamemaker_registered|gamemaker_version|health|iap_data|instance_count|instance_id|'
+             r'keyboard_key|keyboard_lastchar|keyboard_lastkey|keyboard_string|lives|mouse_button|'
+             r'mouse_lastbutton|mouse_x|mouse_y|os_browser|os_device|os_type|os_version|pointer_invalid|'
+             r'pointer_null|program_directory|room|room_caption|room_first|room_height|room_last|'
+             r'room_persistent|room_speed|room_width|score|secure_mode|show_health|show_lives|show_score|'
+             r'temp_directory|transition_color|transition_kind|transition_steps|undefined|view_angle|'
+             r'view_current|view_enabled|view_hborder|view_hport|view_hspeed|view_hview|view_object|'
+             r'view_surface_id|view_vborder|view_visible|view_vspeed|view_wport|view_wview|view_xport|'
+             r'view_xview|view_yport|view_yview|webgl_enabled|working_directory|alarm|bbox_bottom|'
+             r'bbox_left|bbox_right|bbox_top|depth|direction|friction|gravity|gravity_direction|hspeed|'
+             r'id|image_alpha|image_angle|image_blend|image_index|image_number|image_single|image_speed|'
+             r'image_xscale|image_yscale|mask_index|object_index|path_endaction|path_index|path_orientation|'
+             r'path_position|path_positionprevious|path_scale|path_speed|persistent|phy_active|'
+             r'phy_angular_damping|phy_angular_velocity|phy_bullet|phy_col_normal_x|'
+             r'phy_col_normal_y|phy_collision_points|phy_collision_x|phy_collision_y|phy_com_x|'
+             r'phy_com_y|phy_dynamic|phy_fixed_rotation|phy_inertia|phy_kinematic|phy_linear_damping|'
+             r'phy_linear_velocity_x|phy_linear_velocity_y|phy_mass|phy_position_x|phy_position_xprevious|'
+             r'phy_position_y|phy_position_yprevious|phy_rotation|phy_sleeping|phy_speed|phy_speed_x|'
+             r'phy_speed_y|solid|speed|sprite_height|sprite_index|sprite_width|sprite_xoffset|'
+             r'sprite_yoffset|timeline_index|timeline_loop|timeline_position|timeline_running|'
+             r'timeline_speed|visible|vspeed|x|xprevious|xstart|y|yprevious|ystart)\b', Name.Builtin),
+            (r'(htme_chatAddChannel|htme_chatAddToQueue|htme_chatGetMessage|htme_chatGetSender|'
+             r'htme_chatSend|htme_chatSendServer|htme_cleanUpInstance|htme_clientBroadcastUnsync|'
+             r'htme_clientCheckConnection|htme_clientCheckConnectionNetworking|htme_clientConnect|'
+             r'htme_clientConnectionFailed|htme_clientConnectNetworking|htme_clientDisconnect|'
+             r'htme_clientIsConnected|htme_clientNetworking|htme_clientRecieveVarGroup|htme_clientStart|'
+             r'htme_clientStop|htme_clientSyncSingleVarGroup|htme_commitData|htme_debugger|'
+             r'htme_debugOverlayEnabled|htme_debugoverlay|htme_defaultEventHandler|htme_doChat|'
+             r'htme_do_createMicro|htme_doDrawInstanceTable|htme_doGlobalSync|htme_doInstAll|'
+             r'htme_doInstCached|htme_doInstInvisible|htme_doInstVisible|htme_doMain|htme_doMain_new|'
+             r'htme_doOff|htme_doPlayers|htme_doSignedPackets|htme_doSignedPackets_new|htme_doStateInstAll|'
+             r'htme_doStateInstCached|htme_doStateInstInvisible|htme_doStateInstVisible|htme_doStateMain|'
+             r'htme_doStateOff|htme_dotbd|htme_ds_map_find_key|htme_findPlayerInstance|'
+             r'htme_forceSyncLocalInstances|htme_getData|htme_getDataServer|htme_getGamename|'
+             r'htme_getLANServers|htme_getPlayerNumber|htme_getPlayers|htme_globalGet|'
+             r'htme_globalSetFast|htme_globalSet|htme_globalSet_new|htme_hash|htme_init|'
+             r'htme_initSignedPacket|htme_isLocal|htme_isServer|htme_isStarted|htme_isStayAlive|'
+             r'htme_iteratePlayers|htme_iteratePlayersReset|htme_networking|'
+             r'htme_networking_searchForBroadcasts|htme_playerMapIP|htme_playerMapPort|'
+             r'htme_recieveGS|htme_recieveSignedPackets|htme_RecieveVar|htme_recieveVarGroup|'
+             r'htme_roomend|htme_roomstart|htme_sendGSFast|htme_sendGS|htme_sendGS_new|'
+             r'htme_sendNewSignedPacket|htme_sendSingleSignedPacket|htme_serverAskPlayersToResync|'
+             r'htme_serverBroadcast|htme_serverBroadcastRoomChange|htme_serverBroadcastUnsync|'
+             r'htme_serverCheckConnections|htme_serverCheckConnectionsNetworking|'
+             r'htme_serverConnectNetworking|htme_serverDisconnect|htme_serverEventHandlerConnecting|'
+             r'htme_serverEventHandlerDisconnecting|htme_serverEventPlayerConnected|'
+             r'htme_serverEventPlayerDisconnected|htme_serverIsInRoom|htme_serverKickClient|'
+             r'htme_serverNetworking|htme_serverPlayerIsInRoom|htme_serverProcessKicks|'
+             r'htme_serverProcessKicks_new|htme_serverRecieveVarGroup|htme_serverRecreateInstancesLocal|'
+             r'htme_serverRemoveBackup|htme_serverSendAllInstances|htme_serverSendBufferToAllExcept|'
+             r'htme_serverShutdown|htme_serverStart|htme_serverStop|htme_serverSyncPlayersUDPHP|'
+             r'htme_serverSyncSingleVarGroup|htme_setData|htme_setGamename|htme_shutdown|'
+             r'htme_signedPacketFillBuffer|htme_signedPacketFillCmdMap|htme_startLANsearch|htme_step|'
+             r'htme_stopLANsearch|htme_string_explode|htme_syncInstances|htme_syncSingleVarGroup|'
+             r'htme_syncVar|mp_addBuiltinBasic|mp_addBuiltinPhysics|mp_add|mp_addPosition|mp_chatGetQueue|'
+             r'mp_chatSend|mp_map_syncIn|mp_map_syncOut|mp_setType|mp_stayAlive|mp_syncAsChatHandler|'
+             r'mp_sync|mp_tolerance|mp_unsync|totro|udphp_clientGetServerIP|udphp_clientGetServerPort|'
+             r'udphp_clientIsConnected|udphp_clientNetworking|udphp_clientPunch|udphp_clientReadData|'
+             r'udphp_config|udphp_createClient|udphp_createServer|udphp_downloadNetworking|'
+             r'udphp_downloadServerList|udphp_handleerror|udphp_playerListIP|udphp_playerListPort|'
+             r'udphp_readData|udphp_serverCommitData|udphp_serverNetworking|udphp_serverPunch|'
+             r'udphp_serverSetData|udphp_stopClient|udphp_stopServer|'
+             r'udphp_string_explode)\b', Keyword.Reserved),
+            (JS_IDENT, Name.Other),
+            (r'[0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?', Number.Float),
+            (r'0b[01]+', Number.Bin),
+            (r'0o[0-7]+', Number.Oct),
+            (r'0x[0-9a-fA-F]+', Number.Hex),
+            (r'[0-9]+', Number.Integer),
+            (r'"(\\\\|\\"|[^"])*"', String.Double),
+            (r"'(\\\\|\\'|[^'])*'", String.Single),
         ]
     }
