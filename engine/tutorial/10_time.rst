@@ -24,6 +24,7 @@ instance on 4 PCs, instead of 4 instances at 4 PCs.
 
 Let me show you how this works.
 
+**Create a new object** called ``htme_obj_time``. Set depth to 1 so it will draw in the background behind the player object. And add the following code
 in the beginning of the create event:
 
 .. code-block:: gml
