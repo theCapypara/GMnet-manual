@@ -1,4 +1,4 @@
-``htme_globalSetFAST(name,value,datatype)``
+``htme_globalSetFast(name,value,datatype)``
 -------------------------------------------
 
 Description
@@ -20,7 +20,7 @@ Example
 .. code-block:: gml
 
     var value = 1+1;
-    htme_globalSetFAST("name",value,buffer_u8);
+    htme_globalSetFast("name",value,buffer_u8);
 
 Arguments
 ~~~~~~~~~
