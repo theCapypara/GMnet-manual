@@ -154,8 +154,6 @@ To display the chat, put the following code into the **draw-event**:
 
 .. code-block:: gml
 
-    if (!htme_isLocal()) exit; //Again, exit if not our instance
-
     //Get an offset, so we draw the newest line on bottom
     var size = ds_list_size(self.output);
     var bottomLine = room_height-50;
