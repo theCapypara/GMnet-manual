@@ -24,8 +24,7 @@ instance on 4 PCs, instead of 4 instances at 4 PCs.
 
 Let me show you how this works.
 
-**Create a new object** called ``htme_obj_time``. Add the following code
-to the beginning of the create event:
+in the beginning of the create event:
 
 .. code-block:: gml
 
@@ -34,7 +33,7 @@ to the beginning of the create event:
        exit;
     }
 
-| Let's prevent **I'm a client**:
+| Let's pretend **I'm a client**:
 | I create the instance, **see that I'm not the server**, instantly
   **destroy it** and then **recieve the instance from the server
   controlled by the server**.
