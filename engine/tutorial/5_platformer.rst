@@ -120,6 +120,10 @@ the event and then this code:
     draw_set_halign(fa_left);
     draw_set_color(c_white);
 
+Now, the last thing to do is to place one ``htme_obj_player`` in the play room ``htme_rom_demo``.
+Every player that joins the game will create its own player object. 
+If you add two player objects in the room. Every player create two player objects.
+
 Basic platformer: Done!
 
 4. Test
