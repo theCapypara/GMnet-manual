@@ -46,6 +46,25 @@ First you see **debug level**. Valid options can be found
 in the enum ``htme_debug`` and how debugging works is explained in the
 comment. Leave it on the default option for now.
 
+The next thing is **gmversionpick**. Depending on what version of game maker
+you are using you may need to change this.
+If you use above 1.4.1567 set this value to 1.
+If you use 1.4.1567 or below set this value to 3. If you set it to 3
+you need to go to ``htme_serverStart`` and comment this line:
+
+.. code-block:: gml
+
+    switch (gmversionpick)
+    {
+        // You maybe dont got network_create_socket_ext just add // in front of it
+        //case 1: self.socketOrServer = network_create_socket_ext(network_socket_udp,port); break;
+        case 2: self.socketOrServer = network_create_socket(network_socket_udp); break;
+        case 3: self.socketOrServer = network_create_server(network_socket_udp,port,maxclients); break;
+        default: htme_error_message_handler("Go to script: htme_serverStart and decomment the one you use!");  
+    }
+
+This is because if you use 1.4.1567 or below you dont got the **network_create_socket_ext** function.
+
 Let's skip ahead to **``self.global_timeout``**. That's actually the
 only important configuration option and even that can stay on default if
 you want. Timeout specifies after how many steps of inactivity the
