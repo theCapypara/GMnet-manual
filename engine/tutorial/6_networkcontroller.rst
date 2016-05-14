@@ -13,15 +13,20 @@ The **engine will stop** running on the client-side, when the
 .. code-block:: gml
 
     ///Check if engine running
-    if (!htme_isStarted()) {
-        show_message("Game Server or Client died! Restarting game...");
-        game_restart();
+    if (htme_isLostConnection()) {
+        htme_error_message_handler("Game Server or Client died! Go back to menu...");
+    
+        // Clean other persistent non synced objects from room
+        with htme_obj_chat instance_destroy();
+        with htme_obj_playerlist instance_destroy();    
+    
+        room_goto(htme_rom_menu);
     }
 
-If ``htme_isStarted()`` **returns false** at any point after your client
+If ``htme_isLostConnection()`` **returns true** at any point after your client
 connected to the server, you can be very certain, that you **lost
 conection** to the server. Into the if Statement, simply put your own
-code to handle this scenario. ``htme_isStarted()`` should always return
-true for the server, unless the server dies due to an errror.
+code to handle this scenario. ``htme_isLostConnection()`` should always return
+false for the server, unless the server dies due to an errror.
 
 Oh, and don't forget to put the object into the ``htme_rom_demo``.
