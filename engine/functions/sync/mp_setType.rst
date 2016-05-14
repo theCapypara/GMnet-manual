@@ -21,28 +21,28 @@ Example
 Arguments
 ~~~~~~~~~
 
-+-------+-------+--------------+
-| Name  | type  | description  |
-+=======+=======+==============+
-| group | strin | The name of  |
-| name  | g     | the group of |
-|       |       | which you    |
-|       |       | want to      |
-|       |       | change the   |
-|       |       | type of      |
-+-------+-------+--------------+
-| inter | real  | The values   |
-| val   |       | of the enum  |
-|       |       | mp\_type can |
-|       |       | be seen in   |
-|       |       | htme\_config |
-|       |       | or `the      |
-|       |       | manual <conc |
-|       |       | epts/synctyp |
-|       |       | es>`__.      |
-+-------+-------+--------------+
++-------+-------+----------------+
+| Name  | type  | description    |
++=======+=======+================+
+| group | strin | The name of    |
+| name  | g     | the group of   |
+|       |       | which you      |
+|       |       | want to        |
+|       |       | change the     |
+|       |       | type of        |
++-------+-------+----------------+
+| inter | real  | The values     |
+| val   |       | of the enum    |
+|       |       | mp\_type can   |
+|       |       | be seen in     |
+|       |       | htme\_config   |
+|       |       | or             |
+|       |       | `the manual`_. |
++-------+-------+----------------+
 
 Returns
 ~~~~~~~
 
 Nothing
+
+.. _the manual: concepts/synctypes

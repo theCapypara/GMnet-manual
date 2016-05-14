@@ -22,68 +22,65 @@ Example
 Arguments
 ~~~~~~~~~
 
-+-------+-------+--------------+
-| Name  | type  | description  |
-+=======+=======+==============+
-| group | strin | The name of  |
-| name  | g     | the group,   |
-|       |       | this is only |
-|       |       | used locally |
-|       |       | to identify  |
-|       |       | this group,  |
-|       |       | for example  |
-|       |       | if you want  |
-|       |       | to use       |
-|       |       | `mp\_setType |
-|       |       |  <functions/ |
-|       |       | sync/mp_setT |
-|       |       | ype>`__      |
-+-------+-------+--------------+
-| varia | strin | A list of    |
-| bles  | g     | local        |
-|       |       | variables of |
-|       |       | the instance |
-|       |       | seperated    |
-|       |       | with commas  |
-+-------+-------+--------------+
-| datat | real, | A value of a |
-| ype   | buffe | "buffer\_"   |
-|       | r\_\* | constant to  |
-|       |       | specify the  |
-|       |       | data type of |
-|       |       | all          |
-|       |       | variables in |
-|       |       | this group.  |
-|       |       | `See the     |
-|       |       | manual <conc |
-|       |       | epts/buffer> |
-|       |       | `__          |
-|       |       | for a list   |
-|       |       | of datatypes |
-|       |       | and their    |
-|       |       | meanings.    |
-|       |       | All          |
-|       |       | datatypes    |
-|       |       | from enum    |
-|       |       | mp\_buffer\_ |
-|       |       | types        |
-|       |       | are also     |
-|       |       | allowed but  |
-|       |       | should not   |
-|       |       | be used by   |
-|       |       | you as a     |
-|       |       | user!        |
-+-------+-------+--------------+
-| inter | real  | The interval |
-| val   |       | in which the |
-|       |       | variable     |
-|       |       | group get's  |
-|       |       | synced with  |
-|       |       | the other    |
-|       |       | players      |
-+-------+-------+--------------+
++-------+-------+---------------+
+| Name  | type  | description   |
++=======+=======+===============+
+| group | strin | The name of   |
+| name  | g     | the group,    |
+|       |       | this is only  |
+|       |       | used locally  |
+|       |       | to identify   |
+|       |       | this group,   |
+|       |       | for example   |
+|       |       | if you want   |
+|       |       | to use        |
+|       |       | `mp_setType`_ |
++-------+-------+---------------+
+| varia | strin | A list of     |
+| bles  | g     | local         |
+|       |       | variables of  |
+|       |       | the instance  |
+|       |       | seperated     |
+|       |       | with commas   |
++-------+-------+---------------+
+| datat | real, | A value of a  |
+| ype   | buffe | "buffer\_"    |
+|       | r\_\* | constant to   |
+|       |       | specify the   |
+|       |       | data type of  |
+|       |       | all           |
+|       |       | variables in  |
+|       |       | this group.   |
+|       |       | `See manual`_ |
+|       |       | for a list    |
+|       |       | of datatypes  |
+|       |       | and their     |
+|       |       | meanings.     |
+|       |       | All           |
+|       |       | datatypes     |
+|       |       | from enum     |
+|       |       | mp\_buffer\_  |
+|       |       | types         |
+|       |       | are also      |
+|       |       | allowed but   |
+|       |       | should not    |
+|       |       | be used by    |
+|       |       | you as a      |
+|       |       | user!         |
++-------+-------+---------------+
+| inter | real  | The interval  |
+| val   |       | in which the  |
+|       |       | variable      |
+|       |       | group get's   |
+|       |       | synced with   |
+|       |       | the other     |
+|       |       | players       |
++-------+-------+---------------+
 
 Returns
 ~~~~~~~
 
 Nothing
+
+.. _mp_setType:  functions/sync/mp_setType
+.. _See manual:  concepts/buffer
