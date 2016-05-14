@@ -1,5 +1,5 @@
-3. Server
----------
+Server
+------
 
 Okay so we are done in obj\_control. Let’s go to **obj\_server** and
 **obj\_client**. Both have the same structure. *GMnet PUNCH* uses the
@@ -85,9 +85,3 @@ To get ip and port of a player entry:
 
 To send a message to all players iterate over the player list and send a
 packet to all players (see hello world demo in step event).
-
---------------
-
-**» Next topic: `Client <tutorial/4_client>`__**
-
-« Previous topic: `obj\_control <tutorial/2_obj_control>`__

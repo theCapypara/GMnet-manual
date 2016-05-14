@@ -1,5 +1,5 @@
-5. Lobby
---------
+Lobby
+-----
 
 GMnet PUNCH features a lobby system. Let me guide you through it.
 
@@ -248,7 +248,3 @@ How can my clients get the gamename and data strings after they connected?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Please see script ``udphp_clientReadData`` for how this works.
-
---------------
-
-« Previous topic: `Client <tutorial/4_client>`__

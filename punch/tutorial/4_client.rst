@@ -1,5 +1,5 @@
-4. Client
----------
+Client
+------
 
 Client create event
 ~~~~~~~~~~~~~~~~~~~
@@ -85,9 +85,3 @@ GMnet PUNCH is now set up!
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the next page we will show the last feature: The online lobby!
-
---------------
-
-**» Next topic: `Done! <tutorial/5_lobby>`__**
-
-« Previous topic: `Server <tutorial/3_server>`__

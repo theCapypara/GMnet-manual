@@ -26,7 +26,6 @@ Here you can find the manuals for all GMnet products.
 
    punch/gettingstarted
    punch/tutorial
-   punch/about
    punch/more/*
 
 GMnet GATE PUNCH Manual

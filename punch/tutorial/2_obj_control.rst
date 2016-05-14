@@ -1,5 +1,5 @@
-2. obj\_control
----------------
+obj_control
+-----------
 
 Let’s actually talk about this “behaviour”: I will not go over the debug
 objects in the sample project, I will only guide you through the
@@ -34,10 +34,3 @@ Copy the call of this script to your game startup or somewhere else
 where it get’s called before the other GMnet PUNCH scripts. Make sure no
 global variables starting with udphp\_ are used. These are reserved for
 *GMnet PUNCH*.
-
---------------
-
-**» Next topic: `Server <tutorial/3_server>`__**
-
-« Previous topic: `Implementing GMnet PUNCH in your
-game <tutorial/1_intro>`__
