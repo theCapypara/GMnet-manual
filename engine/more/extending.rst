@@ -1,4 +1,8 @@
 Extending the Engine / Advanced Use
------------------------------------
+----
 
-*Will be added in an upcoming update*
+.. toctree::
+   :maxdepth: 2
+   :glob:
+
+   extending/*
