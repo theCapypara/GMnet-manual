@@ -25,7 +25,7 @@ play together online, only locally, or the server has to open ports.
 GMnet PUNCH configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In ``htme_init`` there are several variables you need to change to use
+In ``htme_config`` there are several variables you need to change to use
 *GMnet PUNCH*.
 
 ``self.use_udphp``: This is the most obvious one. Set this to

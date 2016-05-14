@@ -1,4 +1,4 @@
-``htme_init()``
+``htme_config()``
 ---------------
 
 Description

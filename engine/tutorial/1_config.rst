@@ -30,17 +30,19 @@ Configuration
 ~~~~~~~~~~~~~
 
 Great! No matter what option you chose, you propably want to take a look
-at the configuration, so let me walk you through.
+at the initiation and configuration, so let me walk you through.
 
-**The configuration can be found in ``scripts/htme/htme_init``**. The
-first things in this configurations are the enums that are used by the
-engine. Just ignore them and jump straight to ``CONFIGURATION``.
+Before we look at the configuration we check the initiation script.
+**The init can be found in ``scripts/htme/htme_init``**.
 
-The first thing you'll find under configuration is ``randomize();``.
+The first thing you'll find under initiation is ``randomize();``.
 That assures that the random operations Game Maker does are truly
-random, which is important for the engine.
+random, which is important for the engine. This is good to know when you make your game.
+Thats all for the initiation for now. Let's go to configuration.
 
-After that you can set the **debug level**. Valid options can be found
+**The configuration can be found in ``scripts/htme/htme_config``**.
+
+First you see **debug level**. Valid options can be found
 in the enum ``htme_debug`` and how debugging works is explained in the
 comment. Leave it on the default option for now.
 
