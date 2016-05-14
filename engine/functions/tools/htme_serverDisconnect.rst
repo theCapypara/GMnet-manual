@@ -5,7 +5,7 @@ Description
 ~~~~~~~~~~~
 
 Asks a client to execute htme\_clientDisconnect to disconnect. If he
-doesn't within the timeout set in htme\_init, he will be kicked by the
+doesn't within the timeout set in htme\_config, he will be kicked by the
 server.
 
 Arguments

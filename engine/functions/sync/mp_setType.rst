@@ -35,7 +35,7 @@ Arguments
 | val   |       | of the enum  |
 |       |       | mp\_type can |
 |       |       | be seen in   |
-|       |       | htme\_init   |
+|       |       | htme\_config |
 |       |       | or `the      |
 |       |       | manual <conc |
 |       |       | epts/synctyp |

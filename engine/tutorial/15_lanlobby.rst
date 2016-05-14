@@ -29,7 +29,7 @@ The new concepts: Gamenames
 
 **(This is the same text as in the online lobby tutorial**)
 
-In ``htme_init`` there is a new variable you need to change when
+In ``htme_config`` there is a new variable you need to change when
 creating your own game (keep the default for the demo project though,
 otherwise you can't join demo servers via the lobby):
 
@@ -95,7 +95,7 @@ Setting broadcast settings.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default the servers will broadcast their information to all PCs in
-the LAN each 15 seconds. You can change this in ``htme_init`` by
+the LAN each 15 seconds. You can change this in ``htme_config`` by
 changing the value of ``self.lan_interval``
 
 .. code-block:: gml

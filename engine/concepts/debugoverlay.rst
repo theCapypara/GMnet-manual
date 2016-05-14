@@ -3,7 +3,7 @@ The debug overlay
 
 The debug overlay is a new feature that allows you to do better
 debugging. Enable it by setting ``self.debugoverlay`` to true in
-**htme\_init**.
+**htme\_config**.
 
 .. raw:: html
 

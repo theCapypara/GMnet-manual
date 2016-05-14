@@ -43,7 +43,7 @@ can join it.
 The new concepts: Gamenames
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In ``htme_init`` there is a new variable you need to change when
+In ``htme_config`` there is a new variable you need to change when
 creating your own game (keep the default for the demo project though,
 otherwise you can't join demo servers via the lobby):
 
