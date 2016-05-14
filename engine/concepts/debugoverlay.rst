@@ -166,16 +166,22 @@ Lists all `CHAT Interface <./concepts/chat>`__ channels and how many
 messages haven't been processed (read) and what the content of the most
 recent unread message is.
 
-F8: Signed packet queue
+F8: Signed packets sent
 -----------------------
 
 Shows details about all `signed packets <concepts/signedpackets>`__ that
 are not yet recieved by the clients/server.
 
-F9-F10
-------
+F9: Signed packets inbox
+------------------------
 
-*Not implemented yet*.
+Shows details about all `signed packets <concepts/signedpackets>`__ that
+have been sent to the clients/server.
+
+F10: Maps and Lists
+------------------------
+
+Shows a count of all **ds_lists** and **ds_maps**. If the numbers just increase it may be a memory leak somewhere.
 
 F11: Disconnect - Client only
 -----------------------------
