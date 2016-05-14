@@ -5,7 +5,7 @@ In this tutorial we want to make a **simple platformer** with some neat
 little extras to demonstrate what *GMnet ENGINE* can do. Our platformer
 will have:
 
--  Walls/Players/Physics (obviously)
+-  Walls/Players/Physics (not Box2D) (obviously)
 -  Multiple rooms
 -  An overlay that shows connected players
 -  A night and day cycle
