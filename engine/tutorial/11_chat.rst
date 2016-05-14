@@ -96,9 +96,10 @@ arrived. We will be checking every step if new messages arrived.
 
 .. code-block:: gml
 
-    var queue = mp_chatGetQueue();
-    while (ds_queue_size(queue) > 0) {
-        var raw_message = ds_queue_dequeue(queue);
+    if htme_isStarted() {
+        var queue = mp_chatGetQueue();
+        while (ds_queue_size(queue) > 0) {
+            var raw_message = ds_queue_dequeue(queue);
 
 The first line uses
 `mp\_chatGetQueue <functions/chat/mp_chatGetQueue>`__ to get the queue
@@ -111,8 +112,8 @@ it:
 
 .. code-block:: gml
 
-        var sender = htme_chatGetSender(raw_message);
-        var message = htme_chatGetMessage(raw_message);
+            var sender = htme_chatGetSender(raw_message);
+            var message = htme_chatGetMessage(raw_message);
 
 `htme\_chatGetSender <functions/chat/htme_chatGetSender>`__ and
 `htme\_chatGetMessage <functions/chat/htme_chatGetMessage>`__ will, as
@@ -127,12 +128,12 @@ the player) and the sended message.
 
 .. code-block:: gml
 
-        var player_instance = htme_findPlayerInstance(htme_obj_player,sender);
-         if (player_instance != -1) {
-             var name = (player_instance).name;
-         } else {
-             var name = "(Someboy in another room)";
-         }
+            var player_instance = htme_findPlayerInstance(htme_obj_player,sender);
+             if (player_instance != -1) {
+                 var name = (player_instance).name;
+             } else {
+                 var name = "(Someboy in another room)";
+             }
 
 This is the same as in the `chapter 9 <tutorial/9_playerlist>`__, so
 check this page of the tutorial for more information.
@@ -143,8 +144,9 @@ created in the create event, together with who sent it, seperated by a
 
 .. code-block:: gml
 
-        //Add to list of chat output
-        ds_list_add(self.output,name+": "+message);
+            //Add to list of chat output
+            ds_list_add(self.output,name+": "+message);
+        }
     }
 
 Display the chat.
