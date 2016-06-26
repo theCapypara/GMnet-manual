@@ -1,12 +1,21 @@
 UPnP
 ----
 
-UPnP stands for Universal Plug and Play. 
-Punsh use UDP hole punching to make the nat/router allow online connections.
-But not all nats allow UDP punsh. You must then manually port forward the server port (ex 6510). 
-You can do this by enter the nats setup page. Open your browser and type in http://192.168.1.1/.
-This may (if the ip is right) open the nats setup page where you can port forward the server port and allow online play.
+UPnP stands for Universal Plug and Play.
 
-But this can be automated by UPnP.
-When you start the server UPnP will try to port forward the server port for you.
+GMnet PUNCH use UDP hole punching to make the NAT/router allow online connections.
+
+UPnP automates the port forwarding on the users router or NAT. It sends a command to the router to forward a port.
+
+But not all NATs allow UDP punch. The user must then manually port forward the server port (ex 6510)
+or use other methods such as UDP Hole-Punching (as done by GMnet PUNCH) that can also allow online play without UPnP or port forwarding.
+
+By enabling UPnP you allow users who don't forward their port and that are in
+networks that don't support UDP Hole-Punching to play anyway.
+
+When your users start the server, UPnP will try to port forward the server port for them.
 You can enable UPnP in ``udphp_config``.
+
+.. note:: UPnP won't work 100% for everybody (even if UPnP is supported) when used with the GMNet PUNCH master server until version 1.4.0!
+
+          But there is no harm in turning it on anyway.

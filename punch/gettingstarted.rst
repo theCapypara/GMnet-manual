@@ -17,6 +17,7 @@ multiplayer experience.
 
    about/aboutpunching
    about/requirements
+   about/upnp
 
 Features
 ~~~~~~~~
