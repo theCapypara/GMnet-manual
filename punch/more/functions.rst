@@ -12,14 +12,14 @@ Setup:
 -  **udphp\_config**
    One-time setup script
    Usage:
-   udphp\_config(master\_ip,master\_port,reconnect\_intv,timeouts,debug,silent)
+   udphp\_config(master\_ip,master\_port,reconnect\_intv,timeouts,debug,silent,delta time,upnp)
 
 Server:
 ~~~~~~~
 
 -  **udphp\_createServer**
    To be used in the Create event of the server
-   Usage: udphp\_createServer(udp\_server,buffer,player\_list)
+   Usage: udphp\_createServer(udp\_server,buffer,player\_list,upnp port)
 -  **udphp\_serverPunch**
    To be used in the step event of the server
    Usage: udphp\_serverPunch()
